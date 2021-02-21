@@ -1,21 +1,45 @@
-const Express = require('express')();
-const Http = require('http').Server(Express); // http is part of express
-const Socketio = require('socket.io')(Http);
-// socketio will do all our communication with our socket
-// express will serve that web socket for us
+const app = require('express')();
+const http = require('http').createServer(app);
+const io = require('socket.io')(http, {
+  cors: {
+    origin: 'http://localhost:4200',
+    credentials: true,
+  },
+  allowEIO3: true,
+});
 
 const position = {
   x: 200,
   y: 200,
 };
 
-// The connection event is reserved event by socketio. This event is triggered every time a new socket connects to this server
-// When a socket connects, we'll have information about that particular socket
-// In this case, we want to share the position information with them.
-Socketio.on('connection', socket => {
-    socket.emit("position", position);
+io.on('connection', (socket) => {
+  socket.emit('position', position); // send the message to only to that particular client
+  socket.on('move', (data) => {
+    switch (data) {
+      case 'left':
+        position.x -= 5;
+        io.emit('position', position); // send the message to all connected clients
+        break;
+      case 'right':
+        position.x += 5;
+        io.emit('position', position);
+        break;
+      case 'up':
+        position.y -= 5;
+        io.emit('position', position);
+        break;
+      case 'down':
+        position.y += 5;
+        io.emit('position', position);
+        break;
+    }
+  });
+  socket.on('disconnect', () => {
+    console.info('user disconnected');
+  });
 });
 
-Http.listen(3000, () => {
-  console.log('Listening at port 3000 ...');
+http.listen(3000, () => {
+  console.log('listening on *:3000');
 });
